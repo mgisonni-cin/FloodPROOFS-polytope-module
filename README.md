@@ -1,0 +1,210 @@
+# Polytope Downloader for FloodPROOFS
+
+Download ECMWF Destination Earth Extremes-DT data nedded for FloodPROOFS via Polytope. This is done using a small, modular, and config-driven Python toolchain.
+
+- **Config lives in** `configs/default.yaml` (address + base request).
+- **Parameter registry** lives in `params/params.yaml`.
+- **Outputs** are written to `data/YYYY/MM/DD/param.nc`.
+
+> Authentication for Polytope is required **once** before using the downloader (see below).
+
+---
+
+## Repository structure
+
+.
+├── configs
+│   └── default.yaml
+├── data *(example)*
+│   └── 2025
+│       └── 11
+│           └── 10
+│               ├── 2t.nc
+│               └── strd.nc
+├── params
+│   └── params.yaml
+├── requirements.txt
+└── src
+    ├── config.py
+    ├── desp-authentication.py
+    ├── downloader.py
+    ├── main.py
+    ├── params.py
+    └── processing.py
+
+---
+
+## Initial setup
+
+To create an isolated environment, we make use of a Python virtual environment `venv`. You might need to install it via  sudo apt install python3-venv.
+
+```bash
+envname=polytope_env
+# Create a virtual environment
+python3 -m venv $envname
+# Activate it
+source $envname/bin/activate
+# Upgrade pip
+pip install --upgrade pip
+# Install dependencies
+pip install -r requirements.txt
+```
+
+---
+
+## One-time authentication
+
+Before the first run, authenticate to the Polytope service: this will store your token/credentials locally. The `<username>` and `<password>` credentials are those linked to your [Destination Earth platform account](https://platform.destine.eu/). To access these services, you might need to require (and be entitled to) an [upgraded account](https://platform.destine.eu/access-policy-upgrade/)
+
+```
+python src/desp-authentication.py-u`<username>`-p`<password>`
+```
+
+You typically **do not** need to repeat this for subsequent runs.
+
+---
+
+## Configuration
+
+`configs/default.yaml` contains only the **Polytope address** and the  **base request template** :
+
+```
+address:"polytope.lumi.apps.dte.destination-earth.eu"
+
+base_request:
+  class:"d1"
+  expver:"0001"
+  stream:"oper"
+  dataset:"extremes-dt"
+  date:"0"
+  time:"0000"
+  type:"fc"
+  grid:"0.05/0.05"
+  area:"50.0/2.0/34.0/20.0"
+```
+
+> We intentionally **do not** configure output paths here, as `src/config.py` resolves them relative to the repository root:
+>
+> * `output_dir_base` → `<repo_root>/data`
+> * `params_file` → `<repo_root>/params/params.yaml`
+
+You can override both at runtime (see below).
+
+---
+
+## Parameters registry
+
+`params/params.yaml` maps parameters shortnames (`2t`, `strd`, etc.) to ECMWF param codes and metadata:
+
+```
+2t:
+  param:"167"
+  levtype:"sfc"
+  step:"1/2/3"
+  type:"instant"
+
+strd:
+  param:"175"
+  levtype:"sfc"
+  step:"0-1/1-2/2-3"
+  type:"accum"
+```
+
+> Add more entries as needed. For pressure levels, you shall include `levelist` keys.
+
+---
+
+## Usage
+
+Run from the  **repository root** :
+
+- All parameters for today (UTC)
+
+  ```
+  python src/main.py
+  ```
+- Specific params for a specific date
+
+  ```
+  python src/main.py --dates20251110 --params 2t strd
+  ```
+- Multiple dates
+
+  ```
+  python src/main.py --dates 20251110 20251111 --params 2t
+  ```
+
+### Request overrides
+
+You can override request components at runtime:
+
+- Change area and grid
+
+  ```
+  python src/main.py --params 2t --dates 20251110 --area "52/0/30/22" --grid "0.1/0.1"
+  ```
+- Change Polytope address
+
+  ```
+  python src/main.py --address polytope.some.other.host
+  ```
+
+By default:
+
+* Outputs go to `data/YYYY/MM/DD/`.
+* Parameters are read from `params/params.yaml`.
+  You can override both:
+
+- Write to a custom base directory
+
+  ```
+  python src/main.py --outdir/scratch/polydl*out**--dates20251110--params 2t*
+  ```
+- Use a custom params file
+
+  ```
+  python src/main.py --params-file/path/to/my*params.yaml--dates20251110
+  ```
+
+> When overriding `--outdir`, the date-based structure is still enforced:
+> `/scratch/polydl_out/2025/11/10/2t.nc`.
+
+---
+
+## Accumulated vs Interval (Hourly) Values
+
+Many parameters retrieved from Polytope are **cumulative** fields, where each forecast step contains
+the accumulation from **step 0 up to step N** (e.g., total precipitation from model start time to step N).
+
+By **default**, this downloader converts cumulative fields into **per-step intervals** (hourly accumulations)
+by differencing consecutive steps (i.e., step N minus step N-1). This is often what downstream hydrology
+or energy workflows expect.
+
+- Example: if `strd` or `tp` are marked as `type: accum` in `params.yaml`, the output NetCDF will contain
+  **hourly** values by default.
+
+If you prefer to keep the **cumulative values** as they come from the API, simply use:
+
+```
+python src/main.py --dates 20251110 --params strd --keep-cumulative
+```
+
+## Troubleshooting
+
+* **Invalid date format** Make sure `--dates` are `YYYYMMDD` (e.g., `20251110`).
+* **Authentication errors** If the token is missing/expired, re-run:
+  ```
+  python src/desp-authentication.py -u `<username>` -p `<password>`
+  ```
+* **No parameters selected** Ensure your `--params` exist in `params/params.yaml` (check spelling).Or omit `--params` to use **all** available parameters.
+* **Paths** The script assumes you run from the  **repo root** . If running elsewhere, either:
+* `cd` to the repo root, or use absolute paths for `--config`, `--outdir`, and `--params-file`.
+
+---
+
+## Development tips
+
+* Add new parameters by editing `params/params.yaml`.
+* If you need to experiment with requests, use `--area`, `--grid`, and `--params` flags.
+
+---
