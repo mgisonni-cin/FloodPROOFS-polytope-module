@@ -12,29 +12,8 @@ Download ECMWF Destination Earth Extremes-DT data nedded for FloodPROOFS via Pol
 
 ## Repository structure
 
-.
-├── configs
-│   └── default.yaml
-├── data *(example)*
-│   └── 2025
-│       └── 11
-│           └── 10
-│               ├── 2t.nc
-│               └── strd.nc
-├── params
-│   └── params.yaml
-├── requirements.txt
-└── src
-    ├── config.py
-    ├── desp-authentication.py
-    ├── downloader.py
-    ├── main.py
-    ├── params.py
-    └── processing.py
-
----
-
-FloodPROOFS_module_dev/
+<pre>
+📁 FloodPROOFS_module_dev/
 ├── configs/
 │   └── default.yaml
 ├── data/                      # Output directory (auto-created)
@@ -47,12 +26,16 @@ FloodPROOFS_module_dev/
 │   └── params.yaml
 ├── requirements.txt
 └── src/
-├── config.py
-├── desp-authentication.py
-├── downloader.py
-├── main.py
-├── params.py
-└── processing.py
+    ├── config.py
+    ├── desp-authentication.py
+    ├── downloader.py
+    ├── main.py
+    ├── params.py
+    └── processing.py
+</pre>
+
+---
+
 
 ## Initial setup
 
