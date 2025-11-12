@@ -34,6 +34,26 @@ Download ECMWF Destination Earth Extremes-DT data nedded for FloodPROOFS via Pol
 
 ---
 
+FloodPROOFS_module_dev/
+├── configs/
+│   └── default.yaml
+├── data/                      # Output directory (auto-created)
+│   └── 2025/
+│       └── 11/
+│           └── 10/
+│               ├── 2t.nc
+│               └── strd.nc
+├── params/
+│   └── params.yaml
+├── requirements.txt
+└── src/
+├── config.py
+├── desp-authentication.py
+├── downloader.py
+├── main.py
+├── params.py
+└── processing.py
+
 ## Initial setup
 
 To create an isolated environment, we make use of a Python virtual environment `venv`. You might need to install it via  sudo apt install python3-venv.
