@@ -13,7 +13,7 @@ Download ECMWF Destination Earth Extremes-DT data nedded for FloodPROOFS via Pol
 ## Repository structure
 
 <pre>
-📁 FloodPROOFS_module_dev/
+. FloodPROOFS-polytope-module
 ├── configs/
 │   └── default.yaml
 ├── data/                      # Output directory (auto-created)
@@ -171,6 +171,60 @@ By default:
 
 > When overriding `--outdir`, the date-based structure is still enforced:
 > `/scratch/polydl_out/2025/11/10/2t.nc`.
+
+---
+
+### Aviso Integration for Event-Driven Downloads
+
+We also integrate **event-driven downloads** for the *Extremes-DT* dataset via Aviso. This allows the downloader to run automatically when a notification for a specific date is received. 
+
+Refer also to the [official aviso examples repository](https://github.com/ecmwf/aviso-examples). As mentioned there, one might need to obtain credentials from the [ECMWF API Page](https://api.ecmwf.int/v1/key/)
+
+#### How it works
+- The listener subscribes to Aviso notifications for the `data` event.
+- It waits for a notification matching:
+  - The **default request filter** (defined in `configs/aviso.yaml`).
+  - The **target date** provided on the command line.
+- When a matching notification arrives, the listener **executes the downloader**:
+  ```bash
+  python3 src/main.py --dates <target_date>
+  ```
+- After running the downloader, the listener **exits cleanly**.
+
+#### Usage
+Start the listener for a specific date:
+```bash
+python src/aviso_listen.py --date YYYYMMDD
+```
+
+Example:
+```bash
+python src/aviso_listen.py --date 20251110
+```
+
+#### Configuration
+Aviso connection settings for *Extremes-DT* are in:
+```
+configs/aviso.yaml
+```
+You can override this file with `--aviso-config`:
+```bash
+python src/aviso_listen.py --date 20251110 --aviso-config configs/aviso.yaml
+```
+
+#### Timeout (optional)
+By default, the listener waits **indefinitely** for a matching notification.  
+To avoid hanging forever in batch jobs, use `--timeout-min` to exit after a given number of minutes if no notification arrives:
+```bash
+python src/aviso_listen.py --date 20251110 --timeout-min 120
+```
+If the timeout expires, the script exits with code `3` without running the downloader.
+
+#### Summary
+- **Default behavior:** Wait forever until the notification for the target date arrives.
+- **On match:** Run `src/main.py` with `--dates <target_date>` and exit.
+- **Optional:** Use `--timeout-min` for safety in scheduled jobs.
+- **Configurable:** Aviso connection details in `configs/aviso.yaml`.
 
 ---
 
