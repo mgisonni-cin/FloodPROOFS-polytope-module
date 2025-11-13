@@ -64,6 +64,8 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+Once the environment is created, you can load it again just via `source polytope_env/bin/activate`.
+
 ---
 
 ## One-time authentication
