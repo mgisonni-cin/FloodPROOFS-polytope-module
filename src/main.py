@@ -19,17 +19,33 @@ def main():
     )
     parser.add_argument("--config", help="Path to config YAML (default: configs/default.yaml)", default=None)
     parser.add_argument("--dates", nargs="+", help="List of dates (YYYYMMDD)", default=None)
-    parser.add_argument("--params", nargs="+", help="Parameter names to download", default=None)
+
+    # --- Parameter file + selection ---
+    parser.add_argument(
+        "--params-file",
+        help="Path to the parameters YAML file (default: <repo_root>/params/params.yaml)",
+        default=None,
+    )
+    parser.add_argument(
+        "--params",
+        nargs="+",
+        help="Subset of parameter names to select from the chosen params file",
+        default=None,
+    )
+
+    # --- Request overrides (optional) ---
     parser.add_argument("--outdir", help="Override output_dir_base", default=None)
-    parser.add_argument("--area", help="Override area", default=None)
-    parser.add_argument("--grid", help="Override grid", default=None)
+    parser.add_argument("--area", help="Override request area", default=None)
+    parser.add_argument("--grid", help="Override grid resolution", default=None)
     parser.add_argument("--address", help="Override polytope address", default=None)
+
+    # --- Accumulation behavior ---
     parser.add_argument(
         "--keep-cumulative",
         action="store_true",
         help=(
             "Do NOT convert cumulative variables to interval (hourly) accumulations. "
-            "By default, cumulative variables (e.g., precipitation or radiation totals that "
+            "By default, cumulative variables (e.g., precipitation/radiation totals that "
             "accumulate from step 0..N) are converted to per-step intervals using consecutive differences."
         ),
     )
@@ -40,20 +56,30 @@ def main():
     cfg = load_config(args.config)
     base_request = dict(cfg["base_request"])
 
-    # === Apply overrides ===
+    # === Apply request overrides ===
     if args.area:
         base_request["area"] = args.area
     if args.grid:
         base_request["grid"] = args.grid
 
     address = args.address or cfg["address"]
-    output_dir_base = args.outdir or cfg["output_dir_base"]
 
-    # === Load and filter parameters ===
-    all_params = load_params(cfg["params_file"])
-    selected = select_params(all_params, args.params)
+    # Defaults come from config.py; CLI flags override them here.
+    output_dir_base = args.outdir or cfg["output_dir_base"]
+    params_file = args.params_file or cfg["params_file"]
+
+    # === Load and (optionally) filter parameters ===
+    all_params = load_params(params_file)
+
+    # Filter parameters according to the flag --params
+    requested_names = args.params
+    selected = select_params(all_params, requested_names)
     if not selected:
-        logger.error("No valid parameters selected. Check your --params list or your params.yaml.")
+        if requested_names:
+            logger.error(f"No valid parameters selected from file '{params_file}'. "
+                         f"Requested: {requested_names}. Available: {list(all_params.keys())}")
+        else:
+            logger.error(f"No parameters found in file '{params_file}'.")
         raise SystemExit(2)
 
     # === Dates to process ===
@@ -73,10 +99,9 @@ def main():
 
         output_dir = os.path.join(output_dir_base, f"{dt.year:04d}", f"{dt.month:02d}", f"{dt.day:02d}")
 
-        for name, param, request, meta in iter_param_requests(base_request, date_str, selected):
+        for name, param_id, request, meta in iter_param_requests(base_request, date_str, selected):
             try:
                 var_type = meta.get("type", "instant")
-                # Default: convert cumulative→interval unless user keeps cumulative
                 convert_cumulative = (var_type == "accum") and (not args.keep_cumulative)
                 download_and_process(
                     name=name,
@@ -87,7 +112,7 @@ def main():
                     convert_cumulative=convert_cumulative,
                 )
             except Exception as e:
-                logger.error(f"Failed to process {name} ({param}) for {date_str}: {e}")
+                logger.error(f"Failed to process {name} (param {param_id}) for {date_str}: {e}")
                 raise SystemExit(1)
 
 if __name__ == "__main__":

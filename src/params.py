@@ -1,11 +1,16 @@
 from typing import Dict, Any, Iterable, Tuple
 import yaml
+from pathlib import Path
 
 def load_params(params_file: str) -> Dict[str, Dict[str, Any]]:
-    with open(params_file, "r") as f:
+    p = Path(params_file)
+    if not p.exists():
+        raise FileNotFoundError(f"Params file not found: {p}")
+    with p.open("r") as f:
         params = yaml.safe_load(f) or {}
-    # Expect params keyed by name: {name: {param, levtype, step, type, ...}}
+    # Expect params keyed by name: {name: {param_id, levtype, step, type, ...}}
     return params
+
 
 def select_params(all_params: Dict[str, Dict[str, Any]],
                   requested: Iterable[str] | None) -> Dict[str, Dict[str, Any]]:
@@ -25,10 +30,10 @@ def iter_param_requests(base_request: Dict[str, Any],
     Yield (name, param, request, meta) for each parameter.
     """
     for name, meta in params.items():
-        param = meta["param"]
+        param_id = meta["param_id"]
         req = dict(base_request)
         req.update({
-            "param": param,
+            "param_id": param_id,
             "date": date_str,
             "levtype": meta["levtype"],
             "step": meta["step"],
@@ -37,4 +42,4 @@ def iter_param_requests(base_request: Dict[str, Any],
         for k in ("level", "levelist"):
             if k in meta:
                 req[k] = meta[k]
-        yield name, param, req, meta
+        yield name, param_id, req, meta

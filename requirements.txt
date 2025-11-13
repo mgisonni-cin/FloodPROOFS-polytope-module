@@ -5,3 +5,5 @@ h5netcdf>=1.0
 cftime>=1.6
 polytope-client
 pyaviso
+lxml
+conflator

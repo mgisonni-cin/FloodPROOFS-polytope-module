@@ -1,12 +1,14 @@
 # Polytope Downloader for FloodPROOFS
 
-Download ECMWF Destination Earth Extremes-DT data nedded for FloodPROOFS via Polytope. This is done using a small, modular, and config-driven Python toolchain.
+Download ECMWF Destination Earth Extremes-DT data nedded for **FloodPROOFS** via *Polytope*. This is done using a small, modular, and config-driven Python toolchain. Integration of the *Aviso* notification system for automatic download at data readiness is also explored.
 
-- **Config lives in** `configs/default.yaml` (address + base request).
+- **Config lives in** `configs/default.yaml`.
 - **Parameter registry** lives in `params/params.yaml`.
 - **Outputs** are written to `data/YYYY/MM/DD/param.nc`.
 
 > Authentication for Polytope is required **once** before using the downloader (see below).
+
+Refer also to the official ECMWF repositories for [polytope](https://github.com/ecmwf/polytope) and [polytope-examples](https://github.com/destination-earth-digital-twins/polytope-examples), [aviso](https://github.com/ecmwf/aviso) and [aviso-examples](https://github.com/ecmwf/aviso-examples).
 
 ---
 
@@ -39,7 +41,13 @@ Download ECMWF Destination Earth Extremes-DT data nedded for FloodPROOFS via Pol
 
 ## Initial setup
 
-To create an isolated environment, we make use of a Python virtual environment `venv`. You might need to install it via  sudo apt install python3-venv.
+***Python>=3.10*** is required to run this repo: either install it in your local machine or load it as a module if you are operating in a cluster environment. We make use of a Python virtual environment `venv` to handle the dependencies of Polytope/Aviso. In your local machine, you might need to install it via:  
+
+```
+sudo apt install python3-venv.
+```
+
+Once `venv` is present in your machine, the environment can be set up via the following commands:
 
 ```bash
 envname=polytope_env
@@ -57,19 +65,20 @@ pip install -r requirements.txt
 
 ## One-time authentication
 
-Before the first run, authenticate to the Polytope service: this will store your token/credentials locally. The `<username>` and `<password>` credentials are those linked to your [Destination Earth platform account](https://platform.destine.eu/). To access these services, you might need to require (and be entitled to) an [upgraded account](https://platform.destine.eu/access-policy-upgrade/)
+Before the first run, authenticate to the Polytope service: this will store your token/credentials locally, by default at `~/.polytopeapirc`. This can be done using the `src/desp-authentication.py` script as:
 
 ```
-python src/desp-authentication.py-u`<username>`-p`<password>`
+python src/desp-authentication.py -u `<username>` -p `<password>`
 ```
 
-You typically **do not** need to repeat this for subsequent runs.
+The `<username>` and `<password>` credentials are those linked to your [Destination Earth platform account](https://platform.destine.eu/). To access these services, you might need to require (and be entitled to) an [upgraded account](https://platform.destine.eu/access-policy-upgrade/). You typically **do not** need to repeat this for subsequent runs.
 
 ---
 
+
 ## Configuration
 
-`configs/default.yaml` contains only the **Polytope address** and the  **base request template** :
+`configs/default.yaml` contains only the **Polytope address** and the  **base request template** for polytope retrieval :
 
 ```
 address:"polytope.lumi.apps.dte.destination-earth.eu"
@@ -95,84 +104,93 @@ You can override both at runtime (see below).
 
 ---
 
+
 ## Parameters registry
 
-`params/params.yaml` maps parameters shortnames (`2t`, `strd`, etc.) to ECMWF param codes and metadata:
+`params/params.yaml` maps parameters shortnames (`2t`, `strd`, etc.) to ECMWF param IDs and metadata:
 
 ```
 2t:
-  param:"167"
-  levtype:"sfc"
-  step:"1/2/3"
-  type:"instant"
+  param_id: "167"
+  levtype: "sfc"
+  step: "1/2/3"
+  type: "instant"
 
 strd:
-  param:"175"
-  levtype:"sfc"
-  step:"0-1/1-2/2-3"
-  type:"accum"
+  param_id: "175"
+  levtype: "sfc"
+  step: "0-1/1-2/2-3"
+  type: "accum"
 ```
 
 > Add more entries as needed. For pressure levels, you shall include `levelist` keys.
 
 ---
 
+
 ## Usage
 
-Run from the  **repository root** :
+From the **repository root**, run:
 
 - All parameters for today (UTC)
 
   ```
   python src/main.py
   ```
-- Specific params for a specific date
+
+By default:
+
+* Outputs go to `data/YYYY/MM/DD/`.
+* Parameters are read from `params/params.yaml`.
+
+You can override both:
+
+- Write to a custom base directory
 
   ```
-  python src/main.py --dates20251110 --params 2t strd
+  python src/main.py --outdir /scratch/polytope_out --dates 20251110 --params 2t
   ```
+
+- Use a custom params file
+
+  ```
+  python src/main.py --params-file /path/to/my_params.yaml --dates 20251110
+  ```
+
+> When overriding `--outdir`, the date-based structure is still enforced:
+> `/scratch/polydl_out/2025/11/10/2t.nc`.
+
+- Specific params for a specific date (must be contained in the chosen `--parmas-file` or in the default one if not specified)
+
+  ```
+  python src/main.py --dates 20251110 --params 2t strd
+  ```
+
 - Multiple dates
 
   ```
   python src/main.py --dates 20251110 20251111 --params 2t
   ```
 
-### Request overrides
-
-You can override request components at runtime:
-
 - Change area and grid
 
   ```
   python src/main.py --params 2t --dates 20251110 --area "52/0/30/22" --grid "0.1/0.1"
   ```
-- Change Polytope address
 
-  ```
-  python src/main.py --address polytope.some.other.host
-  ```
+### Accumulation behavior
 
-By default:
+By default, cumulative variables (e.g. precipitation or radiation totals) are converted to **interval accumulations** using consecutive step differences.  
+To keep the original cumulative values instead, use:
 
-* Outputs go to `data/YYYY/MM/DD/`.
-* Parameters are read from `params/params.yaml`.
-  You can override both:
+```
+python src/main.py --dates 20251110 --params strd --keep-cumulative
+```
 
-- Write to a custom base directory
-
-  ```
-  python src/main.py --outdir/scratch/polydl*out**--dates20251110--params 2t*
-  ```
-- Use a custom params file
-
-  ```
-  python src/main.py --params-file/path/to/my*params.yaml--dates20251110
-  ```
-
-> When overriding `--outdir`, the date-based structure is still enforced:
-> `/scratch/polydl_out/2025/11/10/2t.nc`.
+More info below
 
 ---
+
 
 ### Aviso Integration for Event-Driven Downloads
 
@@ -185,32 +203,36 @@ Refer also to the [official aviso examples repository](https://github.com/ecmwf/
 - It waits for a notification matching:
   - The **default request filter** (defined in `configs/aviso.yaml`).
   - The **target date** provided on the command line.
-- When a matching notification arrives, the listener **executes the downloader**:
-  ```bash
-  python3 src/main.py --dates <target_date>
-  ```
+- When a matching notification arrives, the listener just **executes the polytope downloader** as above.
 - After running the downloader, the listener **exits cleanly**.
 
 #### Usage
-Start the listener for a specific date:
-```bash
-python src/aviso_listen.py --date YYYYMMDD
-```
+Start the listener for a specific date, e.g.
 
-Example:
 ```bash
 python src/aviso_listen.py --date 20251110
 ```
+
+This would listen for notification of the Extremes-DT data readiness for the selected date, and executes the polyotpe downloader as soon as the notification arrives:
+
+```bash
+python3 src/main.py --dates 20251110
+```
+
 
 #### Configuration
 Aviso connection settings for *Extremes-DT* are in:
 ```
 configs/aviso.yaml
 ```
+
 You can override this file with `--aviso-config`:
+
 ```bash
 python src/aviso_listen.py --date 20251110 --aviso-config configs/aviso.yaml
 ```
+
+It is possible, but not treated here, to listen for other ECMWF notification events. Refer to the official Aviso documentation for further information.
 
 #### Timeout (optional)
 By default, the listener waits **indefinitely** for a matching notification.  
@@ -261,7 +283,7 @@ python src/main.py --dates 20251110 --params strd --keep-cumulative
 
 ## Development tips
 
-* Add new parameters by editing `params/params.yaml`.
+* Add new parameters by editing `params/params.yaml` or creating a custom one.
 * If you need to experiment with requests, use `--area`, `--grid`, and `--params` flags.
 
 ---

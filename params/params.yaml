@@ -1,43 +1,43 @@
-# params/params.yaml
+# param_ids/param_ids.yaml
 
 2t:
-  param:    "167"
+  param_id: "167"
   levtype:  "sfc"
   step:     "1/to/72/by/1"
   type:     "instant"
 
 2d:
-  param:    "168"
+  param_id: "168"
   levtype:  "sfc"
   step:     "1/to/72/by/1"
   type:     "instant"
 
 10u:
-  param:    "165"
+  param_id: "165"
   levtype:  "sfc"
   step:     "1/to/72/by/1"
   type:     "instant"
 
 10v:
-  param:    "166"
+  param_id: "166"
   levtype:  "sfc"
   step:     "1/to/72/by/1"
   type:     "instant"
 
 strd:
-  param:    "175"
+  param_id: "175"
   levtype:  "sfc"
   step:     "0-1/to/71-72/by/1"
   type:     "accum"
 
 ssrd:
-  param:    "169"
+  param_id: "169"
   levtype:  "sfc"
   step:     "0-1/to/71-72/by/1"
   type:     "accum"
 
 tp:
-  param:    "228"
+  param_id: "228"
   levtype:  "sfc"
   step:     "0-1/to/71-72/by/1"
   type:     "accum"
