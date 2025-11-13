@@ -17,17 +17,20 @@ Refer also to the official ECMWF repositories for [polytope](https://github.com/
 <pre>
 . FloodPROOFS-polytope-module
 ├── configs/
-│   └── default.yaml
-├── data/                      # Output directory (auto-created)
+│   ├── default.yaml
+│   └── aviso.yaml
+├── data/                      # Output directory (example, auto-created)
 │   └── 2025/
 │       └── 11/
 │           └── 10/
 │               ├── 2t.nc
 │               └── strd.nc
 ├── params/
-│   └── params.yaml
+│   ├── params.yaml
+│   └── params_example.yaml
 ├── requirements.txt
 └── src/
+    ├── aviso_listen.py
     ├── config.py
     ├── desp-authentication.py
     ├── downloader.py
@@ -98,7 +101,6 @@ base_request:
 > We intentionally **do not** configure output paths here, as `src/config.py` resolves them relative to the repository root:
 >
 > * `output_dir_base` → `<repo_root>/data`
-> * `params_file` → `<repo_root>/params/params.yaml`
 
 You can override both at runtime (see below).
 
@@ -107,17 +109,17 @@ You can override both at runtime (see below).
 
 ## Parameters registry
 
-`params/params.yaml` maps parameters shortnames (`2t`, `strd`, etc.) to ECMWF param IDs and metadata:
+`params/params.yaml` maps parameters shortnames (`2t`, `strd`, etc.) to ECMWF param IDs and metadata, e.g.
 
 ```
 2t:
-  param_id: "167"
+  param: "167"
   levtype: "sfc"
   step: "1/2/3"
   type: "instant"
 
 strd:
-  param_id: "175"
+  param: "175"
   levtype: "sfc"
   step: "0-1/1-2/2-3"
   type: "accum"
@@ -186,8 +188,7 @@ You can override both:
 
 ### Accumulation behavior
 
-By default, cumulative variables (e.g. precipitation or radiation totals) are converted to **interval accumulations** using consecutive step differences.  
-To keep the original cumulative values instead, use:
+By default, cumulative variables (e.g. precipitation or radiation totals) are converted to **interval accumulations** using consecutive step differences. To keep the original cumulative values instead, use:
 
 ```
 python src/main.py --date 20251110 --params strd --keep-cumulative
@@ -249,8 +250,7 @@ python src/aviso_listen.py --date 20251107 --timeout-min 90   --  --params-file 
 It is possible, but not treated here, to listen for other ECMWF notification events. Refer to the official Aviso documentation for further information.
 
 #### Timeout (optional)
-By default, the listener waits **indefinitely** for a matching notification.  
-To avoid hanging forever in batch jobs, use `--timeout-min` to exit after a given number of minutes if no notification arrives:
+By default, the listener waits **indefinitely** for a matching notification. To avoid hanging forever in batch jobs, use `--timeout-min` to exit after a given number of minutes if no notification arrives:
 ```bash
 python src/aviso_listen.py --date 20251110 --timeout-min 120
 ```
