@@ -6,12 +6,14 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 from pprint import pprint as pp
+import shlex
 
 from pyaviso import NotificationManager, user_config
 import yaml
 
 # === Globals used by the trigger ===
 TARGET_DATE: str | None = None
+MAIN_ARGS: list[str] = []   # passthrough args for src/main.py
 STOP_EVENT = threading.Event()
 
 
@@ -37,8 +39,10 @@ def require_aviso_config(path: str | None) -> dict:
         cfg = yaml.safe_load(f) or {}
 
     # Required top-level keys
-    required_top = ["notification_engine", "configuration_engine", "schema_parser",
-                    "remote_schema", "auth_type", "listener_request", "event"]
+    required_top = [
+        "notification_engine", "configuration_engine", "schema_parser",
+        "remote_schema", "auth_type", "listener_request", "event"
+    ]
     missing = [k for k in required_top if k not in cfg]
     if missing:
         raise ValueError(f"Missing keys in {cfg_path}: {missing}")
@@ -57,7 +61,7 @@ def on_notification(notification: dict) -> None:
     Uses module-level TARGET_DATE and runs the downloader for that date,
     then signals STOP_EVENT to exit the listener.
     """
-    global TARGET_DATE
+    global TARGET_DATE, MAIN_ARGS
 
     print("=== Aviso notification received ===")
     pp(notification)
@@ -71,7 +75,7 @@ def on_notification(notification: dict) -> None:
 
     if rdate == TARGET_DATE:
         print(f"[aviso] Target date matched: {rdate}. Running downloader...")
-        rc = run_downloader_for_date(TARGET_DATE)
+        rc = run_downloader_for_date(TARGET_DATE, MAIN_ARGS)
         if rc != 0:
             print(f"[aviso] Downloader returned non-zero exit code: {rc}")
         else:
@@ -81,33 +85,48 @@ def on_notification(notification: dict) -> None:
         print(f"[aviso] Notification date {rdate} != target {TARGET_DATE}; continue listening.")
 
 
-def run_downloader_for_date(date_str: str) -> int:
+def run_downloader_for_date(date_str: str, extra_args: list[str] | None = None) -> int:
     """
     Call your existing downloader as if from CLI:
-        python src/main.py --dates <YYYYMMDD>
+        python src/main.py --dates <YYYYMMDD> <passthrough main.py args...>
+
     Using subprocess keeps this script decoupled from downloader internals.
     """
     repo_root = get_repo_root()
     main_py = repo_root / "src" / "main.py"
     cmd = [sys.executable, str(main_py), "--dates", date_str]
-    # If you want to pass extra args (e.g., specific params), append here:
-    # cmd += ["--params", "2t", "strd"]
+    if extra_args:
+        cmd.extend(extra_args)
+
+    print("[aviso] Executing:", " ".join(shlex.quote(c) for c in cmd))
     return subprocess.call(cmd)
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Aviso one-shot listener: run downloader when target date is notified.")
+    p = argparse.ArgumentParser(
+        description="Aviso one-shot listener: run downloader when target date is notified.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     p.add_argument("--date", required=True, help="Target date in YYYYMMDD format.")
-    p.add_argument("--aviso-config", required=False, default=None, help="Path to configs/aviso.yaml (REQUIRED to exist).")
+    p.add_argument("--aviso-config", required=False, default=None,
+                   help="Path to configs/aviso.yaml (REQUIRED to exist).")
     p.add_argument("--from-date", required=False, default=None,
                    help="Override starting point for listening (YYYY-MM-DD). If not provided, take it from aviso.yaml.")
     p.add_argument("--timeout-min", type=int, default=None,
                    help="Optional timeout in minutes; exit with code 3 if no matching notification arrives.")
+
+    # Everything after `--` goes to main.py, untouched.
+    p.add_argument(
+        "main_args",
+        nargs=argparse.REMAINDER,
+        help=("Arguments after '--' are passed to src/main.py unchanged. "
+              "Example: ... -- --config cfg.yaml --params 2t strd --outdir /data/out --keep-cumulative")
+    )
     return p.parse_args()
 
 
 def main():
-    global TARGET_DATE
+    global TARGET_DATE, MAIN_ARGS
 
     args = parse_args()
 
@@ -168,6 +187,12 @@ def main():
         "remote_schema": cfg_dict["remote_schema"],
         "auth_type": cfg_dict["auth_type"],
     })
+
+    # Prepare passthrough args for main.py.
+    # argparse.REMAINDER includes the leading '--' if present; drop it.
+    MAIN_ARGS = list(args.main_args or [])
+    if MAIN_ARGS and MAIN_ARGS[0] == "--":
+        MAIN_ARGS = MAIN_ARGS[1:]
 
     nm = NotificationManager()
 

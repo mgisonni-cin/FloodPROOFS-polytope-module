@@ -148,13 +148,13 @@ You can override both:
 - Write to a custom base directory
 
   ```
-  python src/main.py --outdir /scratch/polytope_out --dates 20251110 --params 2t
+  python src/main.py --outdir /scratch/polytope_out --date 20251110 --params 2t
   ```
 
 - Use a custom params file
 
   ```
-  python src/main.py --params-file /path/to/my_params.yaml --dates 20251110
+  python src/main.py --params-file /path/to/my_params.yaml --date 20251110
   ```
 
 > When overriding `--outdir`, the date-based structure is still enforced:
@@ -163,19 +163,19 @@ You can override both:
 - Specific params for a specific date (must be contained in the chosen `--parmas-file` or in the default one if not specified)
 
   ```
-  python src/main.py --dates 20251110 --params 2t strd
+  python src/main.py --date 20251110 --params 2t strd
   ```
 
 - Multiple dates
 
   ```
-  python src/main.py --dates 20251110 20251111 --params 2t
+  python src/main.py --date 20251110 20251111 --params 2t
   ```
 
 - Change area and grid
 
   ```
-  python src/main.py --params 2t --dates 20251110 --area "52/0/30/22" --grid "0.1/0.1"
+  python src/main.py --params 2t --date 20251110 --area "52/0/30/22" --grid "0.1/0.1"
   ```
 
 ### Accumulation behavior
@@ -184,7 +184,7 @@ By default, cumulative variables (e.g. precipitation or radiation totals) are co
 To keep the original cumulative values instead, use:
 
 ```
-python src/main.py --dates 20251110 --params strd --keep-cumulative
+python src/main.py --date 20251110 --params strd --keep-cumulative
 ```
 
 More info below
@@ -216,7 +216,7 @@ python src/aviso_listen.py --date 20251110
 This would listen for notification of the Extremes-DT data readiness for the selected date, and executes the polyotpe downloader as soon as the notification arrives:
 
 ```bash
-python3 src/main.py --dates 20251110
+python3 src/main.py --date 20251110
 ```
 
 
@@ -232,6 +232,12 @@ You can override this file with `--aviso-config`:
 python src/aviso_listen.py --date 20251110 --aviso-config configs/aviso.yaml
 ```
 
+All flags available for `src/main.py` can also be used when calling `src/aviso_listen.py`, just list them after a `--` separator. For example:
+
+```
+python src/aviso_listen.py --date 20251107 --timeout-min 90   --  --params-file params/params_example.yaml --keep-cumulative
+```
+
 It is possible, but not treated here, to listen for other ECMWF notification events. Refer to the official Aviso documentation for further information.
 
 #### Timeout (optional)
@@ -244,7 +250,7 @@ If the timeout expires, the script exits with code `3` without running the downl
 
 #### Summary
 - **Default behavior:** Wait forever until the notification for the target date arrives.
-- **On match:** Run `src/main.py` with `--dates <target_date>` and exit.
+- **On match:** Run `src/main.py` with `--date <target_date>` and exit.
 - **Optional:** Use `--timeout-min` for safety in scheduled jobs.
 - **Configurable:** Aviso connection details in `configs/aviso.yaml`.
 
@@ -265,12 +271,12 @@ or energy workflows expect.
 If you prefer to keep the **cumulative values** as they come from the API, simply use:
 
 ```
-python src/main.py --dates 20251110 --params strd --keep-cumulative
+python src/main.py --date 20251110 --params strd --keep-cumulative
 ```
 
 ## Troubleshooting
 
-* **Invalid date format** Make sure `--dates` are `YYYYMMDD` (e.g., `20251110`).
+* **Invalid date format** Make sure `--date` are `YYYYMMDD` (e.g., `20251110`).
 * **Authentication errors** If the token is missing/expired, re-run:
   ```
   python src/desp-authentication.py -u `<username>` -p `<password>`

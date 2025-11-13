@@ -99,7 +99,7 @@ def main():
 
         output_dir = os.path.join(output_dir_base, f"{dt.year:04d}", f"{dt.month:02d}", f"{dt.day:02d}")
 
-        for name, param_id, request, meta in iter_param_requests(base_request, date_str, selected):
+        for name, param, request, meta in iter_param_requests(base_request, date_str, selected):
             try:
                 var_type = meta.get("type", "instant")
                 convert_cumulative = (var_type == "accum") and (not args.keep_cumulative)
@@ -112,7 +112,7 @@ def main():
                     convert_cumulative=convert_cumulative,
                 )
             except Exception as e:
-                logger.error(f"Failed to process {name} (param {param_id}) for {date_str}: {e}")
+                logger.error(f"Failed to process {name} (param {param}) for {date_str}: {e}")
                 raise SystemExit(1)
 
 if __name__ == "__main__":
