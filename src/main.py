@@ -15,12 +15,22 @@ logger = logging.getLogger(__name__)
 def main():
     parser = argparse.ArgumentParser(
         description="Download and process ECMWF polytope data",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        # formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument("--config", help="Path to config YAML (default: configs/default.yaml)", default=None)
-    parser.add_argument("--dates", nargs="+", help="List of dates (YYYYMMDD)", default=None)
 
-    # --- Parameter file + selection ---
+    parser.add_argument(
+        "--config", 
+        help="Path to config YAML (default: configs/default.yaml)", 
+        default=None,
+        )
+    
+    parser.add_argument(
+        "--dates", 
+        nargs="+", 
+        help="List of dates (YYYYMMDD) (default: TODAY, be aware that data might not be available yet)", 
+        default=None,
+        )
+
     parser.add_argument(
         "--params-file",
         help="Path to the parameters YAML file (default: <repo_root>/params/params.yaml)",
@@ -29,15 +39,34 @@ def main():
     parser.add_argument(
         "--params",
         nargs="+",
-        help="Subset of parameter names to select from the chosen params file",
+        help="Subset of parameter names to select from the chosen params file (default: all parameters in the selected --params-file)",
         default=None,
     )
 
     # --- Request overrides (optional) ---
-    parser.add_argument("--outdir", help="Override output_dir_base", default=None)
-    parser.add_argument("--area", help="Override request area", default=None)
-    parser.add_argument("--grid", help="Override grid resolution", default=None)
-    parser.add_argument("--address", help="Override polytope address", default=None)
+    parser.add_argument(
+        "--outdir", 
+        help="Override output_dir_base (default: <repo-root>/data)", 
+        default=None,
+        )
+    
+    parser.add_argument(
+        "--area", 
+        help="Override request area (default: `area` value in the configs/default.yaml)", 
+        default=None,
+        )
+    
+    parser.add_argument(
+        "--grid", 
+        help="Override grid resolution (default: `grid` value in the configs/default.yaml)", 
+        default=None,
+        )
+    
+    parser.add_argument(
+        "--address", 
+        help="Override polytope address (default: `address` value in the configs/default.yaml)", 
+        default=None,
+        )
 
     # --- Accumulation behavior ---
     parser.add_argument(

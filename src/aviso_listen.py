@@ -105,22 +105,22 @@ def run_downloader_for_date(date_str: str, extra_args: list[str] | None = None) 
 def parse_args():
     p = argparse.ArgumentParser(
         description="Aviso one-shot listener: run downloader when target date is notified.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        # formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    p.add_argument("--date", required=True, help="Target date in YYYYMMDD format.")
+    p.add_argument("--date", required=False, help="Target date in YYYYMMDD format (default: TODAY, be aware that data might not be available yet).")
     p.add_argument("--aviso-config", required=False, default=None,
-                   help="Path to configs/aviso.yaml (REQUIRED to exist).")
+                   help="Path to aviso configuration, REQUIRED to exist (default: configs/aviso.yaml).")
     p.add_argument("--from-date", required=False, default=None,
-                   help="Override starting point for listening (YYYY-MM-DD). If not provided, take it from aviso.yaml.")
+                   help="Override starting point for listening in (YYYY-MM-DD) format (default: read from configs/aviso.yaml).")
     p.add_argument("--timeout-min", type=int, default=None,
-                   help="Optional timeout in minutes; exit with code 3 if no matching notification arrives.")
+                   help="Optional timeout in minutes; exit with code 3 if no matching notification arrives (default: no timeout).")
 
     # Everything after `--` goes to main.py, untouched.
     p.add_argument(
         "main_args",
         nargs=argparse.REMAINDER,
         help=("Arguments after '--' are passed to src/main.py unchanged. "
-              "Example: ... -- --config cfg.yaml --params 2t strd --outdir /data/out --keep-cumulative")
+              "Example: python src/aviso_listen.py --date 20251107 --timeout-min 90   --   --params-file params/params_example.yaml --keep-cumulative")
     )
     return p.parse_args()
 
@@ -132,7 +132,7 @@ def main():
 
     # Validate target date
     try:
-        TARGET_DATE = datetime.strptime(args.date, "%Y%m%d").strftime("%Y%m%d")
+        TARGET_DATE = datetime.strptime(args.date or datetime.utcnow().strftime("%Y%m%d"), "%Y%m%d").strftime("%Y%m%d")
     except ValueError:
         print("Invalid --date. Expected YYYYMMDD.")
         sys.exit(2)

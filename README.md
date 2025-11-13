@@ -132,10 +132,16 @@ strd:
 
 From the **repository root**, run:
 
-- All parameters for today (UTC)
+- All parameters for today (UTC) *(please be aware that data might not be available yet!)*
 
   ```
   python src/main.py
+  ```
+
+- To download data for a specific date run e.g. *(be aware that data for the Extremes-DT is available only up to 15 days in the past!)*
+
+  ```
+  python src/main.py --dates 20251110
   ```
 
 By default:
@@ -218,6 +224,8 @@ This would listen for notification of the Extremes-DT data readiness for the sel
 ```bash
 python3 src/main.py --date 20251110
 ```
+
+If not date is supplied, it defaults to today; *please be aware that data might not be available yet!*
 
 
 #### Configuration
