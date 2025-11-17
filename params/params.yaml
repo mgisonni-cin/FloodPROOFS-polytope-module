@@ -12,6 +12,13 @@
   step:     "1/to/72/by/1"
   type:     "instant"
 
+q:
+  param:    "133"
+  levtype:  "pl"
+  levelist: "1000"
+  step:     "1/to/72/by/1"
+  type:     "instant"
+
 10u:
   param:    "165"
   levtype:  "sfc"

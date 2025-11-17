@@ -1,7 +1,5 @@
 # configs/default.yaml
 address: "polytope.lumi.apps.dte.destination-earth.eu"
-output_dir_base: "./data"
-params_file: "./params/params.yaml"
 
 base_request:
   class: "d1"
